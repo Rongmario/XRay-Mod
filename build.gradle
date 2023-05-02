@@ -1,63 +1,92 @@
-buildscript {
-    repositories {
-        mavenCentral()
-        maven {
-            name = "forge"
-            url = "http://files.minecraftforge.net/maven"
-        }
-        maven {
-            name = "sonatype"
-            url = "https://oss.sonatype.org/content/repositories/snapshots/"
-        }
+import org.jetbrains.gradle.ext.Gradle
+
+plugins {
+    id 'java-library'
+    id 'org.jetbrains.gradle.plugin.idea-ext' version '1.1.7'
+    id 'com.gtnewhorizons.retrofuturagradle' version '1.2.5'
+}
+
+// Project properties
+group = 'zone.rong.xray'
+version = '2.0'
+
+// Set the toolchain version to decouple the Java we run Gradle with from the Java used to compile and run the mod
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(8))
+        // Azul covers the most platforms for Java 8 toolchains, crucially including MacOS arm64
+        vendor.set(org.gradle.jvm.toolchain.JvmVendorSpec.AZUL)
     }
-    dependencies {
-        classpath 'net.minecraftforge.gradle:ForgeGradle:1.2-SNAPSHOT'
+    // Generate sources and javadocs jars when building and publishing
+    withSourcesJar()
+    withJavadocJar()
+}
+
+// Most RFG configuration lives here, see the JavaDoc for com.gtnewhorizons.retrofuturagradle.MinecraftExtension
+minecraft {
+    mcVersion = '1.7.10'
+}
+
+// Put the version from gradle into mcmod.info
+tasks.processResources.configure {
+    inputs.property 'version', project.version
+    inputs.property 'mcversion', project.minecraft.version
+    filesMatching(['mcmod.info']) { fcd ->
+        fcd.expand ('version': project.version, 'mcversion': project.minecraft.version)
     }
 }
 
-apply plugin: 'forge'
-
-version = "1.0.9"
-group= "com.fgtXray.fgtXray" // http://maven.apache.org/guides/mini/guide-naming-conventions.html
-archivesBaseName = "xray-1.7.10"
-
-minecraft {
-    version = "1.7.10-10.13.4.1558-1.7.10"
-    runDir = "eclipse"
+// Dependencies
+repositories {
+    maven {
+        name = 'OvermindDL1 Maven'
+        url = uri 'https://gregtech.overminddl1.com/'
+        mavenContent {
+            excludeGroup 'net.minecraftforge' // missing the `universal` artefact
+        }
+    }
+    maven {
+        name = 'GTNH Maven'
+        url = uri 'http://jenkins.usrv.eu:8081/nexus/content/groups/public/'
+        allowInsecureProtocol = true
+    }
 }
 
 dependencies {
-    // you may put jars on which you depend on in ./libs
-    // or you may define them like so..
-    //compile "some.group:artifact:version:classifier"
-    //compile "some.group:artifact:version"
-      
-    // real examples
-    //compile 'com.mod-buildcraft:buildcraft:6.0.8:dev'  // adds buildcraft to the dev env
-    //compile 'com.googlecode.efficient-java-matrix-library:ejml:0.24' // adds ejml to the dev env
-
-    // for more info...
-    // http://www.gradle.org/docs/current/userguide/artifact_dependencies_tutorial.html
-    // http://www.gradle.org/docs/current/userguide/dependency_management.html
-
+    // Adds NotEnoughItems and its dependencies (CCL&CCC) to runClient/runServer
+    runtimeOnly 'com.github.GTNewHorizons:NotEnoughItems:2.3.39-GTNH:dev'
+    // Example: grab the ic2 jar from curse maven and deobfuscate
+    // api(rfg.deobf("curse.maven:ic2-242638:2353971"))
+    // Example: grab the ic2 jar from libs/ in the workspace and deobfuscate
+    // api(rfg.deobf(project.files("libs/ic2.jar")))
 }
 
-processResources
-{
-    // this will ensure that this task is redone when the versions change.
-    inputs.property "version", project.version
-    inputs.property "mcversion", project.minecraft.version
-
-    // replace stuff in mcmod.info, nothing else
-    from(sourceSets.main.resources.srcDirs) {
-        include 'mcmod.info'
-                
-        // replace version and mcversion
-        expand 'version':project.version, 'mcversion':project.minecraft.version
+idea {
+    module {
+        inheritOutputDirs = true
     }
-        
-    // copy everything else, thats not the mcmod.info
-    from(sourceSets.main.resources.srcDirs) {
-        exclude 'mcmod.info'
+    project {
+        settings {
+            runConfigurations {
+                "1. Run Client"(Gradle) {
+                    taskNames = ["runClient"]
+                }
+                "2. Run Server"(Gradle) {
+                    taskNames = ["runServer"]
+                }
+                "3. Run Obfuscated Client"(Gradle) {
+                    taskNames = ["runObfClient"]
+                }
+                "4. Run Obfuscated Server"(Gradle) {
+                    taskNames = ["runObfServer"]
+                }
+            }
+            compiler.javac {
+                afterEvaluate {
+                    javacAdditionalOptions = "-encoding utf8"
+                    moduleJavacAdditionalOptions = [(project.name + ".main"): tasks.compileJava.options.compilerArgs.collect { '"' + it + '"' }.join(' ')]
+                }
+            }
+        }
     }
 }
