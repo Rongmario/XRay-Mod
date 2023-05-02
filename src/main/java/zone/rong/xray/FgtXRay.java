@@ -20,7 +20,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-@Mod(modid = "fgtXray", name = "Fgt X-Ray", version = "1.0.1.75")
+@Mod(modid = "fgtXray", name = "X-Ray Mod", version = "2.0")
 public class FgtXRay {
 
     public static final String[] distStrings = new String[] // Strings for use in the GUI Render Distance button
@@ -48,7 +48,7 @@ public class FgtXRay {
 
     public static Configuration config = null;
 
-    public static Map<String, OreInfo> oredictOres = new HashMap<String, OreInfo>();
+    public static Map<String, OreInfo> oredictOres = new HashMap<>();
     /* Ores to check through the ore dictionary and add each instance found to the searchList.
      * put( "oreType", new OreInfo(...) ) oreType is the ore dictionary string id. Press Print OreDict and check console to see list.
      * OreInfo( String "Gui Name", // The name to be displayed in the GUI.
@@ -58,7 +58,7 @@ public class FgtXRay {
      * Open DefaultConfig.java for more info.
      */
 
-    public static List<OreInfo> customOres = new ArrayList<OreInfo>();
+    public static List<OreInfo> customOres = new ArrayList<>();
     /* List of custom id:meta to add.
      * OreInfo( String "Gui Name", // Displayed in the GUI.
      *     int id, int meta, // Set these to whatever the id:meta is for your block.
@@ -66,12 +66,14 @@ public class FgtXRay {
      *     bool enabled) // On by default?
      */
 
+    public static final Map<String, OreInfo> gregtechOres = new HashMap<>();
+
     // The instance of your mod that Forge uses.
     @Instance(value = "FgtXray")
     public static FgtXRay instance;
 
     // Says where the client and server 'proxy' code is loaded.
-    @SidedProxy(clientSide = "com.fgtXray.proxy.ClientProxy", serverSide = "com.fgtXray.proxy.ServerProxy")
+    @SidedProxy(clientSide = "zone.rong.xray.proxy.ClientProxy", serverSide = "zone.rong.xray.proxy.ServerProxy")
     public static ServerProxy proxy;
 
     @EventHandler

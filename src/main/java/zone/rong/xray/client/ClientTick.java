@@ -2,8 +2,11 @@ package zone.rong.xray.client;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.gameevent.TickEvent;
+import gregtech.common.blocks.GT_Block_Ores_Abstract;
+import gregtech.common.blocks.GT_TileEntity_Ores;
 import net.minecraft.block.Block;
 import net.minecraft.client.Minecraft;
+import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.MathHelper;
 import zone.rong.xray.FgtXRay;
 import zone.rong.xray.reference.BlockInfo;
@@ -61,19 +64,38 @@ public class ClientTick implements Runnable {
                         {
                             for (int z = pz - radius; z < pz + radius; z++) // z axis.
                             {
-                                int id = Block.getIdFromBlock(mc.theWorld.getBlock(x, y, z));
+                                Block block = mc.theWorld.getBlock(x, y, z);
+                                boolean gtOre = block instanceof GT_Block_Ores_Abstract;
+
+                                int id = Block.getIdFromBlock(block);
                                 int meta = mc.theWorld.getBlockMetadata(x, y, z);
 
-                                if (mc.theWorld.getBlock(x, y, z).hasTileEntity()) {
+                                if (block.hasTileEntity()) {
                                     meta = 0;
                                 }
 
                                 for (OreInfo ore : OresSearch.searchList) // Now we're actually checking if the current x,y,z block is in our searchList.
                                 {
-                                    if ((ore.draw) && (id == ore.id) && (meta == ore.meta)) // Dont check meta if its -1 (custom)
+                                    if ((ore.draw) && (id == ore.id)) // Dont check meta if its -1 (custom)
                                     {
-                                        temp.add(new BlockInfo(x, y, z, ore.color)); // Add this block to the temp list
-                                        break; // Found a match, move on to the next block.
+                                        if (gtOre)
+                                        {
+                                            TileEntity tile = mc.theWorld.getTileEntity(x, y, z);
+                                            if (tile instanceof GT_TileEntity_Ores)
+                                            {
+                                                GT_TileEntity_Ores gtOreTile = (GT_TileEntity_Ores) tile;
+                                                if (gtOreTile.mMetaData == ore.meta)
+                                                {
+                                                    temp.add(new BlockInfo(x, y, z, ore.color)); // Add this block to the temp list
+                                                    break; // Found a match, move on to the next block.
+                                                }
+                                            }
+                                        }
+                                        if (meta == ore.meta)
+                                        {
+                                            temp.add(new BlockInfo(x, y, z, ore.color)); // Add this block to the temp list
+                                            break; // Found a match, move on to the next block.
+                                        }
                                     }
                                 }
                             }

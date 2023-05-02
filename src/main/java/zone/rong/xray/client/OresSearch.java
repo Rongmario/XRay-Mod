@@ -1,7 +1,9 @@
 package zone.rong.xray.client;
 
+import net.minecraft.block.Block;
 import net.minecraft.client.Minecraft;
 import net.minecraft.item.Item;
+import net.minecraft.item.ItemBlock;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.ChatComponentText;
 import net.minecraftforge.oredict.OreDictionary;
@@ -9,10 +11,7 @@ import zone.rong.xray.FgtXRay;
 import zone.rong.xray.config.ConfigHandler;
 import zone.rong.xray.reference.OreInfo;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class OresSearch {
 
@@ -35,7 +34,9 @@ public class OresSearch {
         int id = 0;
         int meta = 0;
 
-        if (oreIdent.contains(":")) // Hopefully a proper id:meta string.
+        boolean isOreDict = false;
+
+        if (oreIdent.contains(":") && !oreIdent.equals("ID:META")) // Hopefully a proper id:meta string.
         {
             String[] splitArray = oreIdent.split(":");
 
@@ -60,24 +61,48 @@ public class OresSearch {
             }
 
         } else {
-            try {
-                id = Integer.parseInt(oreIdent);
-                meta = 0;
-            } catch (NumberFormatException e) {
-                String notify = "[�aFgt XRay�r] Doesn't support in-game additions to the ore dictionary yet.. Failed to add.";
+            isOreDict = true;
+        }
+        if (isOreDict) {
+            List<ItemStack> ores = OreDictionary.getOres(name, false);
+            if (ores.isEmpty()) {
+                String notify = String.format("[�aFgt XRay�r] %s is not a proper OreDictionary name. Failed to add.", name);
                 ChatComponentText chat = new ChatComponentText(notify);
                 mc.ingameGUI.getChatGUI().printChatMessage(chat);
                 return;
             }
+            boolean added = false;
+            ores = new ArrayList<>(ores);
+            Iterator<ItemStack> oresIter = ores.iterator();
+            while (oresIter.hasNext()) {
+                ItemStack ore = oresIter.next();
+                if (ore.getItem() instanceof ItemBlock) {
+                    added = true;
+                    Block block = ((ItemBlock) ore.getItem()).field_150939_a;
+                    OresSearch.searchList.add(new OreInfo(name, Block.getIdFromBlock(block), ore.getItemDamage(), color, true));
+                    oreIdent = String.format("%d:%d", Block.getIdFromBlock(block), ore.getItemDamage());
+                    String notify = String.format("[�aFgt XRay�r] successfully added %s.", oreIdent);
+                    ChatComponentText chat = new ChatComponentText(notify);
+                    mc.ingameGUI.getChatGUI().printChatMessage(chat);
+                    ConfigHandler.add(name, oreIdent, color);
+                } else {
+                    oresIter.remove();
+                }
+            }
+            if (!added) {
+                String notify = String.format("[�aFgt XRay�r] %s is not a proper OreDictionary name. Failed to add.", name);
+                ChatComponentText chat = new ChatComponentText(notify);
+                mc.ingameGUI.getChatGUI().printChatMessage(chat);
+            }
+        } else {
+            OresSearch.searchList.add(new OreInfo(name, id, meta, color, true));
+            String notify = String.format("[�aFgt XRay�r] successfully added %s.", oreIdent);
+            ChatComponentText chat = new ChatComponentText(notify);
+            mc.ingameGUI.getChatGUI().printChatMessage(chat);
 
+            ConfigHandler.add(name, oreIdent, color);
         }
         //System.out.println( String.format( "Adding ore: %s", oreIdent ) );
-        OresSearch.searchList.add(new OreInfo(name, id, meta, color, true));
-        String notify = String.format("[�aFgt XRay�r] successfully added %s.", oreIdent);
-        ChatComponentText chat = new ChatComponentText(notify);
-        mc.ingameGUI.getChatGUI().printChatMessage(chat);
-
-        ConfigHandler.add(name, oreIdent, color);
     }
 
     public static List<OreInfo> get() // Return the searchList, create it if needed.
